@@ -1,0 +1,13 @@
+{
+  "name": "Islet",
+  "description": "A native Dynamic Island for GNOME Wayland.",
+  "uuid": "islet@jettakarn",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49"
+  ],
+  "url": "https://github.com/jettakarn/islet"
+}

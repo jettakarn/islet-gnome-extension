@@ -1,0 +1,126 @@
+/* Fonts */
+@font-face {
+    font-family: "OpenRunde";
+    src: url("fonts/OpenRunde-Medium.woff");
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: "OpenRunde";
+    src: url("fonts/OpenRunde-Bold.woff");
+    font-weight: 700;
+}
+
+/* Main Container */
+.islet-container {
+    background-color: #000000;
+    border-radius: 32px;
+    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.4);
+    overflow: hidden; 
+}
+
+/* Quick View Boxes */
+.islet-quick-box {
+    padding: 0 15px;
+}
+
+.islet-media-box {
+    padding: 0 15px;
+    spacing: 10px;
+}
+
+/* Large View Box */
+.islet-large-box {
+    padding: 20px 25px; 
+}
+
+/* Typography */
+.islet-text, 
+.islet-weather, 
+.islet-large-time, 
+.islet-large-date,
+.islet-media-title,
+.islet-media-artist,
+.islet-battery-pill,
+.islet-qa-button {
+    font-family: "OpenRunde", sans-serif;
+}
+
+.islet-text {
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.islet-weather {
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.islet-large-time {
+    color: #FFFFFF;
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.islet-large-date {
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* Media Player Styles */
+.islet-media-icon {
+    icon-size: 18px;
+    color: #FFFFFF;
+}
+
+.islet-media-title {
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.islet-media-artist {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Battery Pill */
+.islet-battery-pill {
+    background-color: #FFFFFF;
+    color: #000000;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 2px 8px;
+}
+
+/* Quick Apps Shortcuts */
+.islet-qa-box {
+    /* Removed margin-top because it is now centered in its own tab */
+    spacing: 12px; 
+}
+
+.islet-qa-button {
+    background-color: #FFFFFF;
+    color: #000000;
+    border-radius: 14px;
+    padding: 8px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+    transition-duration: 200ms;
+}
+
+.islet-qa-button:hover {
+    background-color: #E0E0E0;
+    box-shadow: 0px 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.islet-qa-button:active {
+    background-color: #CCCCCC;
+}
