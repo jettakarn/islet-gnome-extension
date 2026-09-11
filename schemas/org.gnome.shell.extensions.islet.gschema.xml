@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.islet" path="/org/gnome/shell/extensions/islet/">
+    <key name="temperature-unit" type="s">
+      <default>'celsius'</default>
+      <summary>Temperature unit</summary>
+      <description>Display temperature in celsius or fahrenheit</description>
+    </key>
+    <key name="auto-collapse" type="b">
+      <default>true</default>
+      <summary>Auto-collapse on focus change</summary>
+      <description>Collapse the expanded island when another window gains focus</description>
+    </key>
+    <key name="clock-format" type="s">
+      <default>'24h'</default>
+      <summary>Clock format</summary>
+      <description>Show time as 24h or 12h</description>
+    </key>
+    <key name="top-margin" type="i">
+      <default>10</default>
+      <summary>Top margin</summary>
+      <description>Vertical offset of the island from the top of the screen (0-40)</description>
+    </key>
+  </schema>
+</schemalist>

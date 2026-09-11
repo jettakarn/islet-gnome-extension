@@ -1,14 +1,14 @@
-/* Fonts */
+/* Fonts — Inter for a light, SF-adjacent look */
 @font-face {
-    font-family: "OpenRunde";
-    src: url("fonts/OpenRunde-Medium.woff");
-    font-weight: 500;
+    font-family: "Inter";
+    src: url("fonts/Inter-Regular.woff2");
+    font-weight: 400;
 }
 
 @font-face {
-    font-family: "OpenRunde";
-    src: url("fonts/OpenRunde-Bold.woff");
-    font-weight: 700;
+    font-family: "Inter";
+    src: url("fonts/Inter-Medium.woff2");
+    font-weight: 500;
 }
 
 /* Main Container */
@@ -16,111 +16,175 @@
     background-color: #000000;
     border-radius: 32px;
     box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.4);
-    overflow: hidden; 
+    overflow: hidden;
 }
 
 /* Quick View Boxes */
 .islet-quick-box {
-    padding: 0 15px;
+    padding: 0 16px;
 }
 
 .islet-media-box {
-    padding: 0 15px;
-    spacing: 10px;
+    padding: 0 16px;
+    spacing: 8px;
 }
 
 /* Large View Box */
 .islet-large-box {
-    padding: 20px 25px; 
+    padding: 20px 24px;
 }
 
 /* Typography */
-.islet-text, 
-.islet-weather, 
-.islet-large-time, 
+.islet-text,
+.islet-weather,
+.islet-large-time,
 .islet-large-date,
 .islet-media-title,
 .islet-media-artist,
 .islet-battery-pill,
 .islet-qa-button {
-    font-family: "OpenRunde", sans-serif;
+    font-family: "Inter", "Adwaita Sans", "Cantarell", sans-serif;
 }
 
 .islet-text {
     color: #FFFFFF;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
+    letter-spacing: 0.2px;
 }
 
 .islet-weather {
-    color: #FFFFFF;
-    font-size: 16px;
-    font-weight: 700;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
 }
 
 .islet-large-time {
     color: #FFFFFF;
-    font-size: 64px;
-    font-weight: 700;
-    line-height: 1.1;
+    font-size: 56px;
+    font-weight: 400;
+    letter-spacing: -1.5px;
+    line-height: 1.05;
 }
 
 .islet-large-date {
-    color: #FFFFFF;
-    font-size: 18px;
-    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0.3px;
 }
 
 /* Media Player Styles */
 .islet-media-icon {
-    icon-size: 18px;
-    color: #FFFFFF;
+    icon-size: 16px;
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .islet-media-title {
     color: #FFFFFF;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
 }
 
 .islet-media-artist {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 14px;
-    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.1px;
 }
 
 /* Battery Pill */
 .islet-battery-pill {
     background-color: #FFFFFF;
     color: #000000;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
     border-radius: 6px;
     padding: 2px 8px;
 }
 
 /* Quick Apps Shortcuts */
 .islet-qa-box {
-    /* Removed margin-top because it is now centered in its own tab */
-    spacing: 12px; 
+    spacing: 10px;
 }
 
 .islet-qa-button {
     background-color: #FFFFFF;
     color: #000000;
-    border-radius: 14px;
-    padding: 8px 16px;
-    font-size: 15px;
-    font-weight: 700;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
-    transition-duration: 200ms;
+    border-radius: 12px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.15px;
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.12);
+    transition-duration: 180ms;
 }
 
 .islet-qa-button:hover {
-    background-color: #E0E0E0;
-    box-shadow: 0px 6px 16px rgba(0, 0, 0, 0.25);
+    background-color: #F2F2F2;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.18);
 }
 
 .islet-qa-button:active {
-    background-color: #CCCCCC;
+    background-color: #E6E6E6;
 }
+
+/* Settings tab */
+.islet-settings-box {
+    spacing: 8px;
+    padding: 0 2px;
+}
+
+.islet-settings-row {
+    spacing: 8px;
+    x-expand: true;
+}
+
+.islet-settings-label,
+.islet-settings-value,
+.islet-settings-chip {
+    font-family: "Inter", "Adwaita Sans", "Cantarell", sans-serif;
+}
+
+.islet-settings-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+.islet-settings-value {
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 22px;
+    text-align: center;
+}
+
+.islet-settings-segment {
+    spacing: 4px;
+}
+
+.islet-settings-chip {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 10px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.15px;
+    transition-duration: 150ms;
+}
+
+.islet-settings-chip:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.islet-settings-chip-active {
+    background-color: #FFFFFF;
+    color: #000000;
+}
+
