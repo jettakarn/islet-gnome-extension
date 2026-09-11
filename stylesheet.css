@@ -11,11 +11,11 @@
     font-weight: 500;
 }
 
-/* Main Container */
+/* Peninsula: flush to top edge, rounded bottom only */
 .islet-container {
     background-color: #000000;
-    border-radius: 32px;
-    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.4);
+    border-radius: 0 0 28px 28px;
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.35);
     overflow: hidden;
 }
 
@@ -25,13 +25,13 @@
 }
 
 .islet-media-box {
-    padding: 0 16px;
-    spacing: 8px;
+    padding: 0 14px;
+    spacing: 0;
 }
 
 /* Large View Box */
 .islet-large-box {
-    padding: 20px 24px;
+    padding: 18px 22px 16px;
 }
 
 /* Typography */
@@ -62,7 +62,7 @@
 
 .islet-large-time {
     color: #FFFFFF;
-    font-size: 56px;
+    font-size: 52px;
     font-weight: 400;
     letter-spacing: -1.5px;
     line-height: 1.05;
@@ -75,24 +75,133 @@
     letter-spacing: 0.3px;
 }
 
-/* Media Player Styles */
-.islet-media-icon {
-    icon-size: 16px;
-    color: rgba(255, 255, 255, 0.85);
+/* Media card tab */
+.islet-media-card {
+    spacing: 14px;
+    padding: 4px 0 2px;
 }
 
-.islet-media-title {
+.islet-media-header {
+    spacing: 12px;
+}
+
+.islet-media-meta {
+    spacing: 2px;
+}
+
+.islet-card-title,
+.islet-card-artist,
+.islet-progress-time {
+    font-family: "Inter", "Adwaita Sans", "Cantarell", sans-serif;
+}
+
+.islet-card-title {
     color: #FFFFFF;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 500;
     letter-spacing: 0.1px;
 }
 
-.islet-media-artist {
+.islet-card-artist {
     color: rgba(255, 255, 255, 0.5);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 400;
-    letter-spacing: 0.1px;
+}
+
+.islet-album-art {
+    border-radius: 10px;
+}
+
+.islet-album-placeholder {
+    background-color: #2A2A2A;
+    border-radius: 10px;
+}
+
+.islet-album-note {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.islet-album-cover {
+    border-radius: 10px;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.islet-waveform {
+    spacing: 3px;
+}
+
+.islet-waveform-quick {
+    spacing: 3px;
+    height: 20px;
+}
+
+.islet-wave-bar {
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: 1.5px;
+}
+
+.islet-progress-row {
+    spacing: 10px;
+}
+
+.islet-progress-time {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 11px;
+    font-weight: 400;
+    min-width: 36px;
+}
+
+.islet-progress-track {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-radius: 2px;
+}
+
+.islet-progress-fill {
+    background-color: #FFFFFF;
+    border-radius: 2px;
+}
+
+.islet-media-buttons {
+    spacing: 8px;
+}
+
+.islet-media-buttons-center {
+    spacing: 18px;
+}
+
+.islet-media-ctrl-btn {
+    background-color: transparent;
+    border-radius: 0;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    transition-duration: 150ms;
+}
+
+.islet-media-ctrl-btn:hover {
+    background-color: transparent;
+}
+
+.islet-media-ctrl-btn:hover .islet-media-ctrl-icon {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.islet-media-ctrl-btn:active {
+    background-color: transparent;
+}
+
+.islet-media-ctrl-btn:active .islet-media-ctrl-icon {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.islet-media-ctrl-icon {
+    color: #FFFFFF;
+}
+
+.islet-media-output-btn {
+    background-color: transparent;
 }
 
 /* Battery Pill */
@@ -187,4 +296,3 @@
     background-color: #FFFFFF;
     color: #000000;
 }
-
