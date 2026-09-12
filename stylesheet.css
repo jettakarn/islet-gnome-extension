@@ -129,17 +129,25 @@
 }
 
 .islet-waveform {
-    spacing: 3px;
+    spacing: 2px;
+    padding: 0;
 }
 
 .islet-waveform-quick {
-    spacing: 3px;
-    height: 20px;
+    spacing: 2px;
 }
 
 .islet-wave-bar {
-    background-color: rgba(255, 255, 255, 0.85);
-    border-radius: 1.5px;
+    spacing: 0;
+}
+
+.islet-wave-cap {
+    background-color: #FFFFFF;
+    border-radius: 99px;
+}
+
+.islet-wave-mid {
+    background-color: #FFFFFF;
 }
 
 .islet-progress-row {
