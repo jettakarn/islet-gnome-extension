@@ -19,6 +19,84 @@
     overflow: hidden;
 }
 
+.islet-container-capsule {
+    border-radius: 20px;
+}
+
+/* Battery banners (charging / low) */
+.islet-battery-banner {
+    padding: 0 18px;
+    spacing: 8px;
+}
+
+.islet-battery-banner-title,
+.islet-battery-banner-pct {
+    font-family: "Inter", "Adwaita Sans", "Cantarell", sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+}
+
+.islet-battery-banner-title {
+    color: #FFFFFF;
+}
+
+.islet-battery-banner-right {
+    spacing: 8px;
+}
+
+.islet-batt-glyph {
+    spacing: 1px;
+}
+
+.islet-batt-pct-charging {
+    color: #7CFF6B;
+}
+
+.islet-batt-pct-low {
+    color: #FF4B6A;
+}
+
+.islet-batt-body {
+    border-radius: 3px;
+}
+
+.islet-batt-fill {
+    margin-left: 2px;
+    border-radius: 2px;
+}
+
+.islet-batt-nub {
+    border-radius: 1px;
+}
+
+.islet-batt-theme-charging .islet-batt-body {
+    background-color: rgba(124, 255, 107, 0.2);
+    border: none;
+}
+
+.islet-batt-theme-charging .islet-batt-fill {
+    background-color: #7CFF6B;
+}
+
+.islet-batt-theme-charging .islet-batt-nub {
+    background-color: #7CFF6B;
+}
+
+.islet-batt-theme-low .islet-batt-body {
+    background-color: rgba(80, 40, 48, 0.9);
+    border: 1.5px solid rgba(255, 75, 106, 0.55);
+}
+
+.islet-batt-theme-low .islet-batt-fill {
+    background-color: #FF4B6A;
+}
+
+.islet-batt-theme-low .islet-batt-nub {
+    background-color: rgba(255, 75, 106, 0.55);
+    border: 1px solid rgba(255, 75, 106, 0.55);
+}
+
 /* Quick View Boxes */
 .islet-quick-box {
     padding: 0 16px;

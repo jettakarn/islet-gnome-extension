@@ -16,10 +16,15 @@ import {
     MEDIA_CARD_HEIGHT,
     MEDIA_COMPACT_WIDTH,
     MEDIA_HOVER_WIDTH,
+    BATTERY_BANNER_MS,
+    BATTERY_BANNER_WIDTH,
+    BATTERY_BANNER_HEIGHT,
+    LOW_BATTERY_PCT,
 } from './lib/constants.js';
 import { createHttpGet, startWeatherPolling, formatTemperature } from './lib/weather.js';
 import { MediaController } from './lib/media.js';
 import { buildSettingsTab, syncSettingsUi, clampMargin } from './lib/settingsUi.js';
+import { buildBatteryBanner } from './lib/batteryBannerUi.js';
 
 export default class IsletExtension extends Extension {
     enable() {
@@ -45,6 +50,12 @@ export default class IsletExtension extends Extension {
         this._dismissShade = null;
         this._soup = new Soup.Session();
         this._media = new MediaController(this);
+        this._isBatteryBanner = false;
+        this._bannerTimeout = null;
+        this._prevUpState = null;
+        this._prevPct = null;
+        this._lowBatteryArmed = true;
+        this._batteryStateSignalId = null;
 
         // Hit area: side + bottom pad only (no top pad — peninsula flush to screen edge)
         this._hitArea = new St.Widget({
@@ -205,9 +216,13 @@ export default class IsletExtension extends Extension {
         this._largeContainer.add_child(topRow);
         this._largeContainer.add_child(this._largeContentStack);
 
+        this._batteryBanner = buildBatteryBanner();
+        this._batteryBannerContainer = this._batteryBanner.box;
+
         this._stack.add_child(this._quickContainer);
         this._stack.add_child(this._mediaQuickContainer);
         this._stack.add_child(this._largeContainer);
+        this._stack.add_child(this._batteryBannerContainer);
 
         Main.layoutManager.uiGroup.add_child(this._hitArea);
 
@@ -536,7 +551,7 @@ export default class IsletExtension extends Extension {
         this._topMargin = topMargin;
 
         this._hitArea.connect('notify::hover', () => {
-            if (!this._island)
+            if (!this._island || this._isBatteryBanner)
                 return;
 
             if (this._hitArea.hover) {
@@ -570,6 +585,8 @@ export default class IsletExtension extends Extension {
 
         this._island.connect('button-release-event', () => {
             if (!this._island)
+                return Clutter.EVENT_STOP;
+            if (this._isBatteryBanner)
                 return Clutter.EVENT_STOP;
             this._isExpanded = !this._isExpanded;
             if (this._isExpanded) {
@@ -606,7 +623,20 @@ export default class IsletExtension extends Extension {
         if (!this._island)
             return;
 
-        let targetWidth, targetHeight, quickOp, mediaOp, largeOp;
+        let targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp;
+
+        if (this._isBatteryBanner) {
+            targetWidth = BATTERY_BANNER_WIDTH;
+            targetHeight = BATTERY_BANNER_HEIGHT;
+            quickOp = 0;
+            mediaOp = 0;
+            largeOp = 0;
+            bannerOp = 255;
+            this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp);
+            return;
+        }
+
+        bannerOp = 0;
 
         if (this._isExpanded) {
             targetWidth = 380;
@@ -640,10 +670,10 @@ export default class IsletExtension extends Extension {
             }
         }
 
-        this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp);
+        this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp);
     }
 
-    _animateTo(targetWidth, targetHeight, quickOpacity, mediaOpacity, largeOpacity) {
+    _animateTo(targetWidth, targetHeight, quickOpacity, mediaOpacity, largeOpacity, bannerOpacity = 0) {
         if (!this._island || !this._hitArea)
             return;
 
@@ -653,6 +683,7 @@ export default class IsletExtension extends Extension {
             quickOpacity,
             mediaOpacity,
             largeOpacity,
+            bannerOpacity,
             topMargin: this._topMargin,
         };
         if (this._animTarget &&
@@ -661,10 +692,16 @@ export default class IsletExtension extends Extension {
             this._animTarget.quickOpacity === next.quickOpacity &&
             this._animTarget.mediaOpacity === next.mediaOpacity &&
             this._animTarget.largeOpacity === next.largeOpacity &&
+            this._animTarget.bannerOpacity === next.bannerOpacity &&
             this._animTarget.topMargin === next.topMargin) {
             return;
         }
         this._animTarget = next;
+
+        if (this._isBatteryBanner)
+            this._island.add_style_class_name('islet-container-capsule');
+        else
+            this._island.remove_style_class_name('islet-container-capsule');
 
         const hitW = targetWidth + HIT_PAD_X * 2;
         const hitH = targetHeight + HIT_PAD_BOTTOM;
@@ -710,6 +747,109 @@ export default class IsletExtension extends Extension {
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             });
         }
+
+        if (this._batteryBannerContainer) {
+            if (bannerOpacity === 0) {
+                this._batteryBannerContainer.remove_all_transitions();
+                this._batteryBannerContainer.opacity = 0;
+            } else {
+                this._batteryBannerContainer.ease({
+                    opacity: bannerOpacity,
+                    duration: 200,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                });
+            }
+        }
+    }
+
+    _clearBannerTimeout() {
+        if (this._bannerTimeout) {
+            GLib.source_remove(this._bannerTimeout);
+            this._bannerTimeout = null;
+        }
+    }
+
+    _isOnAc(state) {
+        return state === UPowerGlib.DeviceState.CHARGING ||
+            state === UPowerGlib.DeviceState.PENDING_CHARGE ||
+            state === UPowerGlib.DeviceState.FULLY_CHARGED;
+    }
+
+    _showBatteryBanner(kind) {
+        if (!this._island || !this._displayDevice)
+            return;
+
+        this._isExpanded = false;
+        this._currentTab = 0;
+        this._hoverActive = false;
+        this._hideDismissShade();
+        this._setExpandedTabPickable(false);
+
+        const pct = Math.round(this._displayDevice.percentage);
+        if (kind === 'charging') {
+            this._batteryBanner.update({
+                title: 'Charging',
+                pct,
+                theme: 'charging',
+            });
+        } else {
+            this._batteryBanner.update({
+                title: 'Low Battery',
+                pct,
+                theme: 'low',
+            });
+        }
+
+        this._isBatteryBanner = true;
+        this._animTarget = null;
+        this._clearBannerTimeout();
+        this._bannerTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, BATTERY_BANNER_MS, () => {
+            this._bannerTimeout = null;
+            this._hideBatteryBanner();
+            return GLib.SOURCE_REMOVE;
+        });
+        this._updateIslandView();
+    }
+
+    _hideBatteryBanner() {
+        if (!this._isBatteryBanner)
+            return;
+        this._isBatteryBanner = false;
+        this._animTarget = null;
+        this._clearBannerTimeout();
+        this._updateIslandView();
+    }
+
+    _onBatteryChanged() {
+        if (!this._island || !this._displayDevice)
+            return;
+
+        this._updateBattery();
+
+        const state = this._displayDevice.state;
+        const pct = this._displayDevice.percentage;
+
+        if (pct > LOW_BATTERY_PCT)
+            this._lowBatteryArmed = true;
+
+        const prevState = this._prevUpState;
+        const prevPct = this._prevPct;
+        const onAc = this._isOnAc(state);
+        const wasOnAc = prevState != null && this._isOnAc(prevState);
+
+        if (prevState != null && !wasOnAc && onAc)
+            this._showBatteryBanner('charging');
+        else if (prevPct != null &&
+                 prevPct > LOW_BATTERY_PCT &&
+                 pct <= LOW_BATTERY_PCT &&
+                 !onAc &&
+                 this._lowBatteryArmed) {
+            this._lowBatteryArmed = false;
+            this._showBatteryBanner('low');
+        }
+
+        this._prevUpState = state;
+        this._prevPct = pct;
     }
 
     _setupClock() {
@@ -737,8 +877,13 @@ export default class IsletExtension extends Extension {
         try {
             this._upClient = UPowerGlib.Client.new_full(null);
             this._displayDevice = this._upClient.get_display_device();
+            this._prevUpState = this._displayDevice.state;
+            this._prevPct = this._displayDevice.percentage;
+            if (this._prevPct > LOW_BATTERY_PCT)
+                this._lowBatteryArmed = true;
             this._updateBattery();
-            this._batterySignalId = this._displayDevice.connect('notify::percentage', () => this._updateBattery());
+            this._batterySignalId = this._displayDevice.connect('notify::percentage', () => this._onBatteryChanged());
+            this._batteryStateSignalId = this._displayDevice.connect('notify::state', () => this._onBatteryChanged());
         } catch (e) {
             this._quickBattery.set_text('AC');
             this._largeBattery.set_text('AC');
@@ -760,6 +905,7 @@ export default class IsletExtension extends Extension {
             this._quickContainer,
             this._mediaQuickContainer,
             this._largeContainer,
+            this._batteryBannerContainer,
             ...this._allTabs(),
         ];
         for (const actor of actors) {
@@ -797,9 +943,18 @@ export default class IsletExtension extends Extension {
             GLib.source_remove(this._timeTimeout);
             this._timeTimeout = null;
         }
-        if (this._displayDevice && this._batterySignalId) {
-            this._displayDevice.disconnect(this._batterySignalId);
-            this._batterySignalId = null;
+        this._clearBannerTimeout();
+        this._hideBatteryBanner();
+
+        if (this._displayDevice) {
+            if (this._batterySignalId) {
+                this._displayDevice.disconnect(this._batterySignalId);
+                this._batterySignalId = null;
+            }
+            if (this._batteryStateSignalId) {
+                this._displayDevice.disconnect(this._batteryStateSignalId);
+                this._batteryStateSignalId = null;
+            }
         }
 
         this._removeTransitions();

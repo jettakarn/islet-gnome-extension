@@ -7,6 +7,10 @@ A native Dynamic Island–style peninsula for GNOME Shell on Wayland. Built as a
 - **Peninsula island** — flush to the top bezel, expands on hover/click
 - **Overview** — clock, date, weather, battery
 - **Media card** — album art, title/artist, progress, prev / play-pause / next, and an output button that opens GNOME Sound settings
+- **Now playing peek** — while music plays, the compact island shows album art on the left and an animated spectrum on the right (colors sampled from the cover)
+- **Battery banners** — iOS-style capsule alerts that expand horizontally for ~3 seconds, then shrink back to the peninsula:
+  - **Charging** (green) when power is connected
+  - **Low battery** (red) when level drops to **20%** or below while discharging (once per drop; resets after charging above 20%)
 - **Shortcuts** — Term, Files, Calc, Browser
 - **In-island settings** — temperature unit, 12/24h clock, auto-collapse, top position
 - **Auto-collapse** when the pointer leaves the island, you click/tap outside it, or another window takes focus (optional)
@@ -38,9 +42,11 @@ Then **log out and log in** (or restart GNOME Shell on Xorg with Alt+F2 → `r`)
 
 | Action | Effect |
 |--------|--------|
-| Hover | Peek clock/battery or now-playing strip |
-| Click | Expand / collapse the island |
+| Hover | Peek clock/battery, or album art + spectrum while playing |
+| Click | Expand / collapse the island (playing → opens **Media** tab first) |
 | Scroll / swipe while expanded | Cycle tabs (wraps around) |
+| Plug in power | **Charging** banner (~3s), then default island |
+| Battery ≤ 20% (on battery) | **Low Battery** banner (~3s), then default island |
 | Media → output icon | Opens **Settings → Sound** |
 | Media → transport | `playerctl` previous / play-pause / next |
 
@@ -57,7 +63,8 @@ islet-gnome-extension/
   lib/
     constants.js        # Pads, sizes, tab count, intervals
     weather.js          # Soup + Open-Meteo / IP geo
-    media.js            # playerctl, art, media card UI + progress
+    media.js            # playerctl, art, media card UI + spectrum + progress
+    batteryBannerUi.js  # Charging / low-battery capsule banners
     settingsUi.js       # In-island settings rows
 ```
 
