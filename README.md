@@ -8,7 +8,7 @@ A native Dynamic Island–style peninsula for GNOME Shell on Wayland. Built as a
 - **Overview** — clock, date, weather, battery
 - **Media card** — album art, title/artist, progress, prev / play-pause / next, and an output button that opens GNOME Sound settings
 - **Now playing peek** — while music plays, the compact island shows album art on the left and an animated spectrum on the right (colors sampled from the cover)
-- **Battery banners** — iOS-style capsule alerts that expand horizontally for ~3 seconds, then shrink back to the peninsula:
+- **Battery banners** — peninsula expands left/right (same style as hover) for ~3 seconds, then shrinks back:
   - **Charging** (green) when power is connected
   - **Low battery** (red) when level drops to **20%** or below while discharging (once per drop; resets after charging above 20%)
 - **Shortcuts** — Term, Files, Calc, Browser
@@ -64,7 +64,7 @@ islet-gnome-extension/
     constants.js        # Pads, sizes, tab count, intervals
     weather.js          # Soup + Open-Meteo / IP geo
     media.js            # playerctl, art, media card UI + spectrum + progress
-    batteryBannerUi.js  # Charging / low-battery capsule banners
+    batteryBannerUi.js  # Charging / low-battery peninsula banners
     settingsUi.js       # In-island settings rows
 ```
 

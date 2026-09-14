@@ -19,11 +19,7 @@
     overflow: hidden;
 }
 
-.islet-container-capsule {
-    border-radius: 20px;
-}
-
-/* Battery banners (charging / low) */
+/* Battery banners (charging / low) — same peninsula expand as hover */
 .islet-battery-banner {
     padding: 0 18px;
     spacing: 8px;

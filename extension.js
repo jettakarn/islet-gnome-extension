@@ -698,11 +698,6 @@ export default class IsletExtension extends Extension {
         }
         this._animTarget = next;
 
-        if (this._isBatteryBanner)
-            this._island.add_style_class_name('islet-container-capsule');
-        else
-            this._island.remove_style_class_name('islet-container-capsule');
-
         const hitW = targetWidth + HIT_PAD_X * 2;
         const hitH = targetHeight + HIT_PAD_BOTTOM;
         const hitX = this._centerX - (targetWidth / 2) - HIT_PAD_X;
