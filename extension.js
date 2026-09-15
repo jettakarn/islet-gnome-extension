@@ -13,7 +13,7 @@ import {
     HIT_PAD_X,
     HIT_PAD_BOTTOM,
     TAB_COUNT,
-    MEDIA_CARD_HEIGHT,
+    EXPANDED_HEIGHT,
     MEDIA_COMPACT_WIDTH,
     MEDIA_HOVER_WIDTH,
     BATTERY_BANNER_MS,
@@ -673,7 +673,7 @@ export default class IsletExtension extends Extension {
 
         if (this._isExpanded) {
             targetWidth = 380;
-            targetHeight = this._currentTab === 1 ? MEDIA_CARD_HEIGHT : 220;
+            targetHeight = EXPANDED_HEIGHT;
             quickOp = 0;
             mediaOp = 0;
             largeOp = 255;

@@ -216,10 +216,10 @@
     letter-spacing: 0.3px;
 }
 
-/* Media card tab */
-.islet-media-card {
-    spacing: 14px;
-    padding: 4px 0 2px;
+/* Media tab (same expanded height / padding rhythm as other tabs) */
+.islet-media-tab {
+    spacing: 10px;
+    padding: 0 2px;
 }
 
 .islet-media-header {
@@ -302,6 +302,10 @@
     min-width: 36px;
 }
 
+.islet-progress-hit {
+    min-height: 20px;
+}
+
 .islet-progress-track {
     background-color: rgba(255, 255, 255, 0.18);
     border-radius: 2px;
@@ -323,9 +327,9 @@
 .islet-media-ctrl-btn {
     background-color: transparent;
     border-radius: 0;
-    padding: 10px;
-    min-width: 44px;
-    min-height: 44px;
+    padding: 6px;
+    min-width: 40px;
+    min-height: 40px;
     transition-duration: 150ms;
 }
 
