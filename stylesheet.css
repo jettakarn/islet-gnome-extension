@@ -93,6 +93,73 @@
     border: 1px solid rgba(255, 75, 106, 0.55);
 }
 
+/* Experimental fingerprint auth square */
+.islet-auth-root {
+    padding: 0;
+}
+
+.islet-auth-island-edge {
+    border-width: 0 2px 2px 2px;
+    border-style: solid;
+    border-color: #7CFF6B;
+    border-radius: 0 0 28px 28px; /* match .islet-container peninsula */
+    background-color: transparent;
+}
+
+.islet-auth-ring {
+    border: 1.5px solid #7CFF6B;
+    border-radius: 99px;
+    background-color: transparent;
+}
+
+.islet-auth-spin {
+    /* Same diameter as .islet-auth-ring — bright arc for 3D spin */
+    border: 2.5px solid transparent;
+    border-top-color: #B8FFA8;
+    border-right-color: rgba(124, 255, 107, 0.55);
+    border-bottom-color: rgba(124, 255, 107, 0.12);
+    border-left-color: transparent;
+    border-radius: 99px;
+    background-color: transparent;
+}
+
+.islet-auth-frame {
+    padding: 0;
+}
+
+.islet-auth-corner {
+    border-color: #7CFF6B;
+    border-style: solid;
+}
+
+.islet-auth-corner-tl {
+    border-width: 2.5px 0 0 2.5px;
+    border-radius: 4px 0 0 0;
+}
+
+.islet-auth-corner-tr {
+    border-width: 2.5px 2.5px 0 0;
+    border-radius: 0 4px 0 0;
+}
+
+.islet-auth-corner-bl {
+    border-width: 0 0 2.5px 2.5px;
+    border-radius: 0 0 0 4px;
+}
+
+.islet-auth-corner-br {
+    border-width: 0 2.5px 2.5px 0;
+    border-radius: 0 0 4px 0;
+}
+
+.islet-auth-finger {
+    color: #7CFF6B;
+}
+
+.islet-auth-check {
+    color: #7CFF6B;
+}
+
 /* Quick View Boxes */
 .islet-quick-box {
     padding: 0 16px;

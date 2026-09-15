@@ -20,11 +20,17 @@ import {
     BATTERY_BANNER_WIDTH,
     BATTERY_BANNER_HEIGHT,
     LOW_BATTERY_PCT,
+    EXPERIMENTAL_FINGERPRINT,
+    AUTH_SQUARE_SIZE,
+    AUTH_SUCCESS_HOLD_MS,
+    AUTH_SHAKE_MS,
 } from './lib/constants.js';
 import { createHttpGet, startWeatherPolling, formatTemperature } from './lib/weather.js';
 import { MediaController } from './lib/media.js';
 import { buildSettingsTab, syncSettingsUi, clampMargin } from './lib/settingsUi.js';
 import { buildBatteryBanner } from './lib/batteryBannerUi.js';
+import { FingerprintAuthMonitor } from './lib/fingerprintAuth.js';
+import { buildFingerprintUi } from './lib/fingerprintUi.js';
 
 export default class IsletExtension extends Extension {
     enable() {
@@ -56,6 +62,12 @@ export default class IsletExtension extends Extension {
         this._prevPct = null;
         this._lowBatteryArmed = true;
         this._batteryStateSignalId = null;
+        this._isFingerprintAuth = false;
+        this._fingerprintSuccessPending = false;
+        this._fingerprintHoldTimeout = null;
+        this._fingerprintMonitor = null;
+        this._fingerprintUi = null;
+        this._shieldSignalId = null;
 
         // Hit area: side + bottom pad only (no top pad — peninsula flush to screen edge)
         this._hitArea = new St.Widget({
@@ -219,10 +231,14 @@ export default class IsletExtension extends Extension {
         this._batteryBanner = buildBatteryBanner();
         this._batteryBannerContainer = this._batteryBanner.box;
 
+        this._fingerprintUi = buildFingerprintUi();
+        this._fingerprintContainer = this._fingerprintUi.root;
+
         this._stack.add_child(this._quickContainer);
         this._stack.add_child(this._mediaQuickContainer);
         this._stack.add_child(this._largeContainer);
         this._stack.add_child(this._batteryBannerContainer);
+        this._stack.add_child(this._fingerprintContainer);
 
         Main.layoutManager.uiGroup.add_child(this._hitArea);
 
@@ -234,6 +250,7 @@ export default class IsletExtension extends Extension {
         this._setupGestures();
         this._setupSettingsBindings();
         this._setupAutoCollapse();
+        this._setupFingerprintAuth();
         this._updateWeatherLabel();
         syncSettingsUi(this);
         this._setExpandedTabPickable(false);
@@ -378,6 +395,8 @@ export default class IsletExtension extends Extension {
         // Shell chrome (panel, etc.)
         this._stageCaptureId = global.stage.connect('captured-event', (_actor, event) => {
             if (!this._island || !this._isExpanded || !this._autoCollapseEnabled())
+                return Clutter.EVENT_PROPAGATE;
+            if (this._isFingerprintAuth || this._isBatteryBanner)
                 return Clutter.EVENT_PROPAGATE;
 
             const type = event.type();
@@ -551,7 +570,7 @@ export default class IsletExtension extends Extension {
         this._topMargin = topMargin;
 
         this._hitArea.connect('notify::hover', () => {
-            if (!this._island || this._isBatteryBanner)
+            if (!this._island || this._isBatteryBanner || this._isFingerprintAuth)
                 return;
 
             if (this._hitArea.hover) {
@@ -586,7 +605,7 @@ export default class IsletExtension extends Extension {
         this._island.connect('button-release-event', () => {
             if (!this._island)
                 return Clutter.EVENT_STOP;
-            if (this._isBatteryBanner)
+            if (this._isBatteryBanner || this._isFingerprintAuth)
                 return Clutter.EVENT_STOP;
             this._isExpanded = !this._isExpanded;
             if (this._isExpanded) {
@@ -623,7 +642,21 @@ export default class IsletExtension extends Extension {
         if (!this._island)
             return;
 
-        let targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp;
+        let targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp;
+
+        if (this._isFingerprintAuth) {
+            targetWidth = AUTH_SQUARE_SIZE;
+            targetHeight = AUTH_SQUARE_SIZE;
+            quickOp = 0;
+            mediaOp = 0;
+            largeOp = 0;
+            bannerOp = 0;
+            authOp = 255;
+            this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp);
+            return;
+        }
+
+        authOp = 0;
 
         if (this._isBatteryBanner) {
             targetWidth = BATTERY_BANNER_WIDTH;
@@ -632,7 +665,7 @@ export default class IsletExtension extends Extension {
             mediaOp = 0;
             largeOp = 0;
             bannerOp = 255;
-            this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp);
+            this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp);
             return;
         }
 
@@ -670,10 +703,10 @@ export default class IsletExtension extends Extension {
             }
         }
 
-        this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp);
+        this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp);
     }
 
-    _animateTo(targetWidth, targetHeight, quickOpacity, mediaOpacity, largeOpacity, bannerOpacity = 0) {
+    _animateTo(targetWidth, targetHeight, quickOpacity, mediaOpacity, largeOpacity, bannerOpacity = 0, authOpacity = 0) {
         if (!this._island || !this._hitArea)
             return;
 
@@ -684,6 +717,7 @@ export default class IsletExtension extends Extension {
             mediaOpacity,
             largeOpacity,
             bannerOpacity,
+            authOpacity,
             topMargin: this._topMargin,
         };
         if (this._animTarget &&
@@ -693,6 +727,7 @@ export default class IsletExtension extends Extension {
             this._animTarget.mediaOpacity === next.mediaOpacity &&
             this._animTarget.largeOpacity === next.largeOpacity &&
             this._animTarget.bannerOpacity === next.bannerOpacity &&
+            this._animTarget.authOpacity === next.authOpacity &&
             this._animTarget.topMargin === next.topMargin) {
             return;
         }
@@ -755,6 +790,19 @@ export default class IsletExtension extends Extension {
                 });
             }
         }
+
+        if (this._fingerprintContainer) {
+            if (authOpacity === 0) {
+                this._fingerprintContainer.remove_all_transitions();
+                this._fingerprintContainer.opacity = 0;
+            } else {
+                this._fingerprintContainer.ease({
+                    opacity: authOpacity,
+                    duration: 200,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                });
+            }
+        }
     }
 
     _clearBannerTimeout() {
@@ -772,6 +820,8 @@ export default class IsletExtension extends Extension {
 
     _showBatteryBanner(kind) {
         if (!this._island || !this._displayDevice)
+            return;
+        if (this._isFingerprintAuth)
             return;
 
         this._isExpanded = false;
@@ -847,6 +897,114 @@ export default class IsletExtension extends Extension {
         this._prevPct = pct;
     }
 
+    _clearFingerprintHoldTimeout() {
+        if (this._fingerprintHoldTimeout) {
+            GLib.source_remove(this._fingerprintHoldTimeout);
+            this._fingerprintHoldTimeout = null;
+        }
+    }
+
+    _setupFingerprintAuth() {
+        if (!EXPERIMENTAL_FINGERPRINT)
+            return;
+
+        this._fingerprintMonitor = new FingerprintAuthMonitor({
+            onStart: () => this._beginFingerprintAuth(),
+            onRetry: () => {
+                if (this._isFingerprintAuth)
+                    this._fingerprintUi?.showScanning();
+            },
+            onSuccess: () => this._onFingerprintSuccess(),
+            onFail: () => this._onFingerprintFail(),
+            onEnd: () => {
+                if (this._isFingerprintAuth && !this._fingerprintSuccessPending)
+                    this._endFingerprintAuth();
+            },
+        });
+        this._fingerprintMonitor.start();
+
+        try {
+            if (Main.screenShield) {
+                this._shieldSignalId = Main.screenShield.connect('active-changed', () => {
+                    if (!Main.screenShield.active &&
+                        this._isFingerprintAuth &&
+                        !this._fingerprintSuccessPending)
+                        this._endFingerprintAuth();
+                });
+            }
+        } catch (e) {
+            // ScreenShield may be unavailable
+        }
+    }
+
+    _beginFingerprintAuth() {
+        if (!this._island)
+            return;
+
+        // Priority over battery banner
+        this._hideBatteryBanner();
+
+        this._isExpanded = false;
+        this._currentTab = 0;
+        this._hoverActive = false;
+        this._hideDismissShade();
+        this._setExpandedTabPickable(false);
+
+        this._fingerprintSuccessPending = false;
+        this._clearFingerprintHoldTimeout();
+        this._isFingerprintAuth = true;
+        this._animTarget = null;
+        this._fingerprintUi?.showScanning();
+        this._updateIslandView();
+    }
+
+    _onFingerprintSuccess() {
+        if (!this._isFingerprintAuth)
+            return;
+        this._fingerprintSuccessPending = true;
+        this._fingerprintUi?.playSuccess(() => {
+            this._clearFingerprintHoldTimeout();
+            this._fingerprintHoldTimeout = GLib.timeout_add(
+                GLib.PRIORITY_DEFAULT,
+                AUTH_SUCCESS_HOLD_MS,
+                () => {
+                    this._fingerprintHoldTimeout = null;
+                    this._fingerprintSuccessPending = false;
+                    this._endFingerprintAuth();
+                    return GLib.SOURCE_REMOVE;
+                }
+            );
+        });
+    }
+
+    _onFingerprintFail() {
+        if (!this._isFingerprintAuth)
+            return;
+        this._fingerprintUi?.shake();
+        this._clearFingerprintHoldTimeout();
+        this._fingerprintHoldTimeout = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT,
+            AUTH_SHAKE_MS + 250,
+            () => {
+                this._fingerprintHoldTimeout = null;
+                if (!this._fingerprintSuccessPending)
+                    this._endFingerprintAuth();
+                return GLib.SOURCE_REMOVE;
+            }
+        );
+    }
+
+    _endFingerprintAuth() {
+        if (!this._isFingerprintAuth && !this._fingerprintSuccessPending)
+            return;
+        this._clearFingerprintHoldTimeout();
+        this._fingerprintSuccessPending = false;
+        this._isFingerprintAuth = false;
+        this._fingerprintUi?.hide();
+        this._animTarget = null;
+        this._updateIslandView();
+    }
+
     _setupClock() {
         this._updateTime();
         this._timeTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
@@ -901,6 +1059,7 @@ export default class IsletExtension extends Extension {
             this._mediaQuickContainer,
             this._largeContainer,
             this._batteryBannerContainer,
+            this._fingerprintContainer,
             ...this._allTabs(),
         ];
         for (const actor of actors) {
@@ -940,6 +1099,24 @@ export default class IsletExtension extends Extension {
         }
         this._clearBannerTimeout();
         this._hideBatteryBanner();
+        this._clearFingerprintHoldTimeout();
+        this._endFingerprintAuth();
+
+        if (this._fingerprintMonitor) {
+            this._fingerprintMonitor.stop();
+            this._fingerprintMonitor = null;
+        }
+        this._fingerprintUi?.destroy();
+        this._fingerprintUi = null;
+
+        if (this._shieldSignalId && Main.screenShield) {
+            try {
+                Main.screenShield.disconnect(this._shieldSignalId);
+            } catch (e) {
+                // ignore
+            }
+            this._shieldSignalId = null;
+        }
 
         if (this._displayDevice) {
             if (this._batterySignalId) {
