@@ -27,7 +27,7 @@ import {
 } from './lib/constants.js';
 import { createHttpGet, startWeatherPolling, formatTemperature } from './lib/weather.js';
 import { MediaController } from './lib/media.js';
-import { buildSettingsTab, syncSettingsUi, clampMargin } from './lib/settingsUi.js';
+import { buildSettingsTab, syncSettingsUi } from './lib/settingsUi.js';
 import { buildBatteryBanner } from './lib/batteryBannerUi.js';
 import { FingerprintAuthMonitor } from './lib/fingerprintAuth.js';
 import { buildFingerprintUi } from './lib/fingerprintUi.js';
@@ -40,7 +40,7 @@ export default class IsletExtension extends Extension {
 
         const initialWidth = 170;
         const initialHeight = 40;
-        const topMargin = clampMargin(this._settings.get_int('top-margin'));
+        const topMargin = 0;
 
         this._isPlaying = false;
         this._isExpanded = false;
@@ -290,23 +290,6 @@ export default class IsletExtension extends Extension {
             this._updateTime();
             syncSettingsUi(this);
         });
-        bind('auto-collapse', () => {
-            syncSettingsUi(this);
-            if (this._isExpanded && this._autoCollapseEnabled())
-                this._showDismissShade();
-            else
-                this._hideDismissShade();
-        });
-        bind('top-margin', () => {
-            this._applyTopMargin(this._settings.get_int('top-margin'));
-            syncSettingsUi(this);
-        });
-    }
-
-    _applyTopMargin(value) {
-        this._topMargin = clampMargin(value);
-        this._animTarget = null;
-        this._updateIslandView();
     }
 
     _collapseExpanded() {
@@ -321,7 +304,7 @@ export default class IsletExtension extends Extension {
     }
 
     _autoCollapseEnabled() {
-        return !!this._settings?.get_boolean('auto-collapse');
+        return true;
     }
 
     _isPointerOnIsland(event) {

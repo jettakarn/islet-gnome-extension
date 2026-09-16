@@ -13,7 +13,7 @@ A native Dynamic Island–style peninsula for GNOME Shell on Wayland. Built as a
   - **Low battery** (red) when level drops to **20%** or below while discharging (once per drop; resets after charging above 20%)
 - **Experimental: fingerprint auth island** — when fprintd starts verification (lock unlock / Settings test), the island morphs into a rounded square with a mint scan frame, breathing green rim/edge, and fingerprint; success spins to a check, failure shakes; falls back to the default island on password / session end
 - **Shortcuts** — Term, Files, Calc, Browser
-- **In-island settings** — temperature unit, 12/24h clock, auto-collapse, top position
+- **In-island settings** — temperature unit, 12/24h clock
 - **Auto-collapse** when the pointer leaves the island, you click/tap outside it, or another window takes focus (optional)
 - **Circular tab swipe** — scroll/swipe wraps Overview → Media → Shortcuts → Settings → Overview
 
