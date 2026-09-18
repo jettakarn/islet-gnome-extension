@@ -25,6 +25,42 @@
     spacing: 8px;
 }
 
+/* Volume HUD — Apple-style level bar */
+.islet-volume-hud {
+    padding: 0 18px;
+    spacing: 10px;
+}
+
+.islet-volume-hud-left {
+    spacing: 8px;
+}
+
+.islet-volume-hud-icon {
+    color: #FFFFFF;
+}
+
+.islet-volume-hud-title {
+    font-family: "Inter", "Adwaita Sans", "Cantarell", sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+    color: #FFFFFF;
+}
+
+.islet-volume-hud-hit {
+    min-height: 20px;
+}
+
+.islet-volume-hud-track {
+    background-color: rgba(255, 255, 255, 0.22);
+    border-radius: 99px;
+}
+
+.islet-volume-hud-fill {
+    background-color: #FFFFFF;
+    border-radius: 99px;
+}
+
 .islet-battery-banner-title,
 .islet-battery-banner-pct {
     font-family: "Inter", "Adwaita Sans", "Cantarell", sans-serif;

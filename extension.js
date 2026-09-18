@@ -6,6 +6,7 @@ import Soup from 'gi://Soup';
 import UPowerGlib from 'gi://UPowerGlib';
 import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Volume from 'resource:///org/gnome/shell/ui/status/volume.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {
@@ -19,6 +20,9 @@ import {
     BATTERY_BANNER_MS,
     BATTERY_BANNER_WIDTH,
     BATTERY_BANNER_HEIGHT,
+    VOLUME_HUD_MS,
+    VOLUME_HUD_WIDTH,
+    VOLUME_HUD_HEIGHT,
     LOW_BATTERY_PCT,
     EXPERIMENTAL_FINGERPRINT,
     AUTH_SQUARE_SIZE,
@@ -29,6 +33,7 @@ import { createHttpGet, startWeatherPolling, formatTemperature } from './lib/wea
 import { MediaController } from './lib/media.js';
 import { buildSettingsTab, syncSettingsUi } from './lib/settingsUi.js';
 import { buildBatteryBanner } from './lib/batteryBannerUi.js';
+import { buildVolumeHud } from './lib/volumeHudUi.js';
 import { FingerprintAuthMonitor } from './lib/fingerprintAuth.js';
 import { buildFingerprintUi } from './lib/fingerprintUi.js';
 import {
@@ -64,6 +69,13 @@ export default class IsletExtension extends Extension {
         this._media = new MediaController(this);
         this._isBatteryBanner = false;
         this._bannerTimeout = null;
+        this._isVolumeHud = false;
+        this._volumeHudTimeout = null;
+        this._mixer = null;
+        this._mixerSignals = [];
+        this._sinkSignals = [];
+        this._volumeSink = null;
+        this._volumeApplying = false;
         this._prevUpState = null;
         this._prevPct = null;
         this._lowBatteryArmed = true;
@@ -192,6 +204,11 @@ export default class IsletExtension extends Extension {
         this._batteryBanner = buildBatteryBanner();
         this._batteryBannerContainer = this._batteryBanner.box;
 
+        this._volumeHud = buildVolumeHud({
+            onSeek: ratio => this._setOutputVolumeRatio(ratio),
+        });
+        this._volumeHudContainer = this._volumeHud.box;
+
         this._fingerprintUi = buildFingerprintUi();
         this._fingerprintContainer = this._fingerprintUi.root;
 
@@ -199,6 +216,7 @@ export default class IsletExtension extends Extension {
         this._stack.add_child(this._mediaQuickContainer);
         this._stack.add_child(this._largeContainer);
         this._stack.add_child(this._batteryBannerContainer);
+        this._stack.add_child(this._volumeHudContainer);
         this._stack.add_child(this._fingerprintContainer);
 
         Main.layoutManager.uiGroup.add_child(this._hitArea);
@@ -207,6 +225,7 @@ export default class IsletExtension extends Extension {
         this._setupBattery();
         this._media.startMetaPolling();
         this._setupWeather();
+        this._setupVolumeMonitor();
         this._setupAnimations(initialWidth, initialHeight, topMargin);
         this._setupGestures();
         this._setupSettingsBindings();
@@ -344,7 +363,7 @@ export default class IsletExtension extends Extension {
         this._stageCaptureId = global.stage.connect('captured-event', (_actor, event) => {
             if (!this._island || !this._isExpanded || !this._autoCollapseEnabled())
                 return Clutter.EVENT_PROPAGATE;
-            if (this._isFingerprintAuth || this._isBatteryBanner)
+            if (this._isFingerprintAuth || this._isBatteryBanner || this._isVolumeHud)
                 return Clutter.EVENT_PROPAGATE;
 
             const type = event.type();
@@ -516,7 +535,7 @@ export default class IsletExtension extends Extension {
         this._topMargin = topMargin;
 
         this._hitArea.connect('notify::hover', () => {
-            if (!this._island || this._isBatteryBanner || this._isFingerprintAuth)
+            if (!this._island || this._isBatteryBanner || this._isVolumeHud || this._isFingerprintAuth)
                 return;
 
             if (this._hitArea.hover) {
@@ -554,7 +573,7 @@ export default class IsletExtension extends Extension {
         this._island.connect('button-release-event', () => {
             if (!this._island)
                 return Clutter.EVENT_STOP;
-            if (this._isBatteryBanner || this._isFingerprintAuth)
+            if (this._isBatteryBanner || this._isVolumeHud || this._isFingerprintAuth)
                 return Clutter.EVENT_STOP;
             // Long-press opens app picker; the release must not toggle expand
             if (this._shortcutsState?.pickMode)
@@ -595,7 +614,7 @@ export default class IsletExtension extends Extension {
         if (!this._island)
             return;
 
-        let targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp;
+        let targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp, volumeOp;
 
         if (this._isFingerprintAuth) {
             targetWidth = AUTH_SQUARE_SIZE;
@@ -604,12 +623,27 @@ export default class IsletExtension extends Extension {
             mediaOp = 0;
             largeOp = 0;
             bannerOp = 0;
+            volumeOp = 0;
             authOp = 255;
-            this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp);
+            this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp, volumeOp);
             return;
         }
 
         authOp = 0;
+
+        if (this._isVolumeHud) {
+            targetWidth = VOLUME_HUD_WIDTH;
+            targetHeight = VOLUME_HUD_HEIGHT;
+            quickOp = 0;
+            mediaOp = 0;
+            largeOp = 0;
+            bannerOp = 0;
+            volumeOp = 255;
+            this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp, volumeOp);
+            return;
+        }
+
+        volumeOp = 0;
 
         if (this._isBatteryBanner) {
             targetWidth = BATTERY_BANNER_WIDTH;
@@ -618,7 +652,7 @@ export default class IsletExtension extends Extension {
             mediaOp = 0;
             largeOp = 0;
             bannerOp = 255;
-            this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp);
+            this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp, volumeOp);
             return;
         }
 
@@ -656,10 +690,10 @@ export default class IsletExtension extends Extension {
             }
         }
 
-        this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp);
+        this._animateTo(targetWidth, targetHeight, quickOp, mediaOp, largeOp, bannerOp, authOp, volumeOp);
     }
 
-    _animateTo(targetWidth, targetHeight, quickOpacity, mediaOpacity, largeOpacity, bannerOpacity = 0, authOpacity = 0) {
+    _animateTo(targetWidth, targetHeight, quickOpacity, mediaOpacity, largeOpacity, bannerOpacity = 0, authOpacity = 0, volumeOpacity = 0) {
         if (!this._island || !this._hitArea)
             return;
 
@@ -671,6 +705,7 @@ export default class IsletExtension extends Extension {
             largeOpacity,
             bannerOpacity,
             authOpacity,
+            volumeOpacity,
             topMargin: this._topMargin,
         };
         if (this._animTarget &&
@@ -681,6 +716,7 @@ export default class IsletExtension extends Extension {
             this._animTarget.largeOpacity === next.largeOpacity &&
             this._animTarget.bannerOpacity === next.bannerOpacity &&
             this._animTarget.authOpacity === next.authOpacity &&
+            this._animTarget.volumeOpacity === next.volumeOpacity &&
             this._animTarget.topMargin === next.topMargin) {
             return;
         }
@@ -756,6 +792,19 @@ export default class IsletExtension extends Extension {
                 });
             }
         }
+
+        if (this._volumeHudContainer) {
+            if (volumeOpacity === 0) {
+                this._volumeHudContainer.remove_all_transitions();
+                this._volumeHudContainer.opacity = 0;
+            } else {
+                this._volumeHudContainer.ease({
+                    opacity: volumeOpacity,
+                    duration: 200,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                });
+            }
+        }
     }
 
     _clearBannerTimeout() {
@@ -774,7 +823,7 @@ export default class IsletExtension extends Extension {
     _showBatteryBanner(kind) {
         if (!this._island || !this._displayDevice)
             return;
-        if (this._isFingerprintAuth)
+        if (this._isFingerprintAuth || this._isVolumeHud)
             return;
 
         this._isExpanded = false;
@@ -816,6 +865,178 @@ export default class IsletExtension extends Extension {
         this._animTarget = null;
         this._clearBannerTimeout();
         this._updateIslandView();
+    }
+
+    _clearVolumeHudTimeout() {
+        if (this._volumeHudTimeout) {
+            GLib.source_remove(this._volumeHudTimeout);
+            this._volumeHudTimeout = null;
+        }
+    }
+
+    _getOutputStream() {
+        try {
+            return this._mixer?.get_default_sink?.() || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    _readOutputVolume() {
+        const stream = this._getOutputStream();
+        if (!stream || !this._mixer)
+            return { level: 0, muted: true };
+        try {
+            const max = this._mixer.get_vol_max_norm?.() || 1;
+            const vol = typeof stream.volume === 'number' ? stream.volume : 0;
+            const muted = !!stream.is_muted;
+            const level = max > 0 ? Math.max(0, Math.min(1, vol / max)) : 0;
+            return { level, muted };
+        } catch (e) {
+            return { level: 0, muted: true };
+        }
+    }
+
+    _setOutputVolumeRatio(ratio) {
+        const stream = this._getOutputStream();
+        if (!stream || !this._mixer)
+            return;
+        const level = Math.max(0, Math.min(1, ratio));
+        try {
+            this._volumeApplying = true;
+            const max = this._mixer.get_vol_max_norm?.() || 1;
+            stream.volume = Math.round(level * max);
+            if (typeof stream.push_volume === 'function')
+                stream.push_volume();
+            if (level > 0.001 && stream.is_muted) {
+                if (typeof stream.change_is_muted === 'function')
+                    stream.change_is_muted(false);
+                else
+                    stream.is_muted = false;
+            }
+            this._volumeHud?.setLevel(level, !!stream.is_muted);
+        } catch (e) {
+            console.error('Failed to set volume:', e);
+        } finally {
+            this._volumeApplying = false;
+        }
+        this._showVolumeHud();
+    }
+
+    _disconnectVolumeSink() {
+        if (this._volumeSink && this._sinkSignals?.length) {
+            for (const id of this._sinkSignals) {
+                try {
+                    this._volumeSink.disconnect(id);
+                } catch (e) {
+                    // ignore
+                }
+            }
+        }
+        this._sinkSignals = [];
+        this._volumeSink = null;
+    }
+
+    _bindVolumeSink() {
+        this._disconnectVolumeSink();
+        const stream = this._getOutputStream();
+        if (!stream)
+            return;
+        this._volumeSink = stream;
+        try {
+            this._sinkSignals.push(stream.connect('notify::volume', () => this._onVolumeChanged()));
+            this._sinkSignals.push(stream.connect('notify::is-muted', () => this._onVolumeChanged()));
+        } catch (e) {
+            console.error('Failed to bind volume sink:', e);
+        }
+    }
+
+    _onVolumeChanged() {
+        if (!this._island || this._volumeApplying)
+            return;
+        this._showVolumeHud();
+    }
+
+    _showVolumeHud() {
+        if (!this._island)
+            return;
+        if (this._isFingerprintAuth)
+            return;
+
+        this._hideBatteryBanner();
+        this._isExpanded = false;
+        this._currentTab = 0;
+        this._hoverActive = false;
+        this._hideDismissShade();
+        this._setExpandedTabPickable(false);
+
+        const { level, muted } = this._readOutputVolume();
+        this._volumeHud?.setLevel(level, muted);
+        this._volumeHud?.setReactive(true);
+
+        this._isVolumeHud = true;
+        this._animTarget = null;
+        this._clearVolumeHudTimeout();
+        this._volumeHudTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, VOLUME_HUD_MS, () => {
+            this._volumeHudTimeout = null;
+            this._hideVolumeHud();
+            return GLib.SOURCE_REMOVE;
+        });
+        this._updateIslandView();
+    }
+
+    _hideVolumeHud() {
+        if (!this._isVolumeHud)
+            return;
+        this._isVolumeHud = false;
+        this._volumeHud?.setReactive(false);
+        this._animTarget = null;
+        this._clearVolumeHudTimeout();
+        this._updateIslandView();
+    }
+
+    _setupVolumeMonitor() {
+        try {
+            this._mixer = Volume.getMixerControl();
+        } catch (e) {
+            console.error('Volume mixer unavailable:', e);
+            this._mixer = null;
+            return;
+        }
+        if (!this._mixer)
+            return;
+
+        this._mixerSignals = [];
+        try {
+            this._mixerSignals.push(this._mixer.connect('default-sink-changed', () => {
+                this._bindVolumeSink();
+            }));
+            this._mixerSignals.push(this._mixer.connect('state-changed', () => {
+                this._bindVolumeSink();
+            }));
+        } catch (e) {
+            console.error('Failed to connect mixer signals:', e);
+        }
+        this._bindVolumeSink();
+    }
+
+    _teardownVolumeMonitor() {
+        this._clearVolumeHudTimeout();
+        this._hideVolumeHud();
+        this._disconnectVolumeSink();
+        if (this._mixer && this._mixerSignals?.length) {
+            for (const id of this._mixerSignals) {
+                try {
+                    this._mixer.disconnect(id);
+                } catch (e) {
+                    // ignore
+                }
+            }
+        }
+        this._mixerSignals = [];
+        this._mixer = null;
+        this._volumeHud?.destroy();
+        this._volumeHud = null;
     }
 
     _onBatteryChanged() {
@@ -896,6 +1117,7 @@ export default class IsletExtension extends Extension {
 
         // Priority over battery banner
         this._hideBatteryBanner();
+        this._hideVolumeHud();
 
         this._isExpanded = false;
         this._currentTab = 0;
@@ -1012,6 +1234,7 @@ export default class IsletExtension extends Extension {
             this._mediaQuickContainer,
             this._largeContainer,
             this._batteryBannerContainer,
+            this._volumeHudContainer,
             this._fingerprintContainer,
             ...this._allTabs(),
         ];
@@ -1052,6 +1275,7 @@ export default class IsletExtension extends Extension {
         }
         this._clearBannerTimeout();
         this._hideBatteryBanner();
+        this._teardownVolumeMonitor();
         this._clearFingerprintHoldTimeout();
         this._endFingerprintAuth();
 
