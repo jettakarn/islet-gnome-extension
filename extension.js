@@ -31,6 +31,12 @@ import { buildSettingsTab, syncSettingsUi } from './lib/settingsUi.js';
 import { buildBatteryBanner } from './lib/batteryBannerUi.js';
 import { FingerprintAuthMonitor } from './lib/fingerprintAuth.js';
 import { buildFingerprintUi } from './lib/fingerprintUi.js';
+import {
+    buildShortcutsTab,
+    rebuildShortcuts,
+    setShortcutsReactive,
+    onShortcutsTabHidden,
+} from './lib/shortcutsUi.js';
 
 export default class IsletExtension extends Extension {
     enable() {
@@ -170,53 +176,8 @@ export default class IsletExtension extends Extension {
         // Tab 1: Media card
         this._mediaTab = this._media.buildTab();
 
-        // Tab 2: Shortcuts
-        this._shortcutsTab = new St.BoxLayout({
-            style_class: 'islet-qa-box',
-            vertical: false,
-            x_expand: true,
-            y_expand: true,
-            x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER,
-            opacity: 0,
-            translation_x: 50,
-            reactive: false,
-        });
-
-        const quickApps = [
-            { name: 'Term', cmd: 'gnome-terminal' },
-            { name: 'Files', cmd: 'nautilus' },
-            { name: 'Calc', cmd: 'gnome-calculator' },
-            { name: 'Browser', uri: 'https://' },
-        ];
-
-        quickApps.forEach(app => {
-            const btn = new St.Button({
-                label: app.name,
-                style_class: 'islet-qa-button',
-                reactive: false,
-                can_focus: false,
-            });
-
-            btn.connect('clicked', () => {
-                if (!this._island)
-                    return;
-                try {
-                    if (app.uri)
-                        Gio.AppInfo.launch_default_for_uri(app.uri, null);
-                    else
-                        GLib.spawn_command_line_async(app.cmd);
-                    this._isExpanded = false;
-                    this._currentTab = 0;
-                    this._setExpandedTabPickable(false);
-                    this._updateIslandView();
-                } catch (e) {
-                    console.error(`Failed to launch ${app.name}:`, e);
-                }
-            });
-
-            this._shortcutsTab.add_child(btn);
-        });
+        // Tab 2: Shortcuts (customizable apps)
+        this._shortcutsTab = buildShortcutsTab(this);
 
         // Tab 3: Settings
         this._settingsTab = buildSettingsTab(this);
@@ -290,11 +251,15 @@ export default class IsletExtension extends Extension {
             this._updateTime();
             syncSettingsUi(this);
         });
+        bind('shortcut-apps', () => {
+            rebuildShortcuts(this);
+        });
     }
 
     _collapseExpanded() {
         if (!this._island || !this._isExpanded)
             return;
+        onShortcutsTabHidden(this);
         this._isExpanded = false;
         this._currentTab = 0;
         this._hoverActive = false;
@@ -477,6 +442,9 @@ export default class IsletExtension extends Extension {
         this._currentTab = index;
         this._lastTabSwitchMs = GLib.get_monotonic_time() / 1000;
 
+        if (from === 2 && index !== 2)
+            onShortcutsTabHidden(this);
+
         const duration = 250;
         const mode = Clutter.AnimationMode.EASE_OUT_QUINT;
         const tabs = this._allTabs();
@@ -520,12 +488,7 @@ export default class IsletExtension extends Extension {
         this._media?.setControlsReactive(expanded && this._currentTab === 1);
 
         const shortcutsOn = expanded && this._currentTab === 2;
-        if (this._shortcutsTab) {
-            this._shortcutsTab.get_children().forEach(child => {
-                child.reactive = shortcutsOn;
-                child.can_focus = shortcutsOn;
-            });
-        }
+        setShortcutsReactive(this, shortcutsOn);
 
         const settingsOn = expanded && this._currentTab === 3;
         if (this._settingsTab) {
@@ -567,6 +530,9 @@ export default class IsletExtension extends Extension {
                 // Expanded: leave immediately so moving back to a window collapses
                 // before the click, and the app receives the interaction.
                 if (this._isExpanded && this._autoCollapseEnabled()) {
+                    // Keep picker open while assigning an app
+                    if (this._shortcutsState?.pickMode)
+                        return;
                     this._collapseExpanded();
                     return;
                 }
@@ -590,6 +556,9 @@ export default class IsletExtension extends Extension {
                 return Clutter.EVENT_STOP;
             if (this._isBatteryBanner || this._isFingerprintAuth)
                 return Clutter.EVENT_STOP;
+            // Long-press opens app picker; the release must not toggle expand
+            if (this._shortcutsState?.pickMode)
+                return Clutter.EVENT_STOP;
             this._isExpanded = !this._isExpanded;
             if (this._isExpanded) {
                 // Playing → open media tab first; otherwise overview
@@ -597,6 +566,7 @@ export default class IsletExtension extends Extension {
                 this._showExpandedAtTab(startTab);
                 this._showDismissShade();
             } else {
+                onShortcutsTabHidden(this);
                 this._hideDismissShade();
             }
             this._setExpandedTabPickable(this._isExpanded);

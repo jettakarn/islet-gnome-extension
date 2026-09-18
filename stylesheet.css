@@ -370,6 +370,10 @@
 
 /* Quick Apps Shortcuts */
 .islet-qa-box {
+    spacing: 8px;
+}
+
+.islet-qa-chips {
     spacing: 10px;
 }
 
@@ -392,6 +396,54 @@
 
 .islet-qa-button:active {
     background-color: #E6E6E6;
+}
+
+.islet-qa-picker {
+    spacing: 6px;
+    padding: 0 2px;
+}
+
+.islet-qa-cancel {
+    background-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.islet-qa-cancel:hover {
+    background-color: rgba(255, 255, 255, 0.22);
+}
+
+.islet-qa-picker-scroll {
+    max-height: 120px;
+}
+
+.islet-qa-picker-list {
+    spacing: 2px;
+}
+
+.islet-qa-picker-row {
+    background-color: transparent;
+    border-radius: 8px;
+    padding: 4px 6px;
+    transition-duration: 120ms;
+}
+
+.islet-qa-picker-row:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.islet-qa-picker-icon {
+    margin-right: 8px;
+}
+
+.islet-qa-picker-label {
+    font-family: "Inter", "Adwaita Sans", "Cantarell", sans-serif;
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 500;
 }
 
 /* Settings tab */

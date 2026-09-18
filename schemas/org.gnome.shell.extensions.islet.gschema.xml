@@ -21,5 +21,10 @@
       <summary>Top margin</summary>
       <description>Vertical offset of the island from the top of the screen (0-40). Default 0 for peninsula style.</description>
     </key>
+    <key name="shortcut-apps" type="as">
+      <default>['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Calculator.desktop', 'firefox.desktop']</default>
+      <summary>Shortcut app desktop IDs</summary>
+      <description>Four installed application .desktop IDs for the Shortcuts tab. Long-press a chip in the island to reassign.</description>
+    </key>
   </schema>
 </schemalist>
